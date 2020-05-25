@@ -51,7 +51,12 @@
               @click="removeUserById(scope.row.id)"
             ></el-button>
             <el-tooltip effect="dark" content="role assignment" placement="top" :enterable="false">
-              <el-button type="warning" icon="el-icon-setting" size="mini"></el-button>
+              <el-button
+                type="warning"
+                icon="el-icon-setting"
+                size="mini"
+                @click="setRole(scope.row)"
+              ></el-button>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -115,6 +120,33 @@
       <span slot="footer" class="dialog-footer">
         <el-button @click="editDialogVisible = false">Cancel</el-button>
         <el-button type="primary" @click="editUser">Confirm</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- dialog for assigning roles  -->
+    <el-dialog
+      title="Assign the Role"
+      :visible.sync="assignVisible"
+      width="30%"
+      @close="setRoleDialogClosed"
+    >
+      <div>
+        <p>Current User is: {{userInfo.username}}</p>
+        <p>The Role is: {{userInfo.role_name}}</p>
+        <p>
+          <el-select v-model="selectedRoleId" placeholder="Please select">
+            <el-option
+              v-for="item in rolesList"
+              :key="item.id"
+              :label="item.roleName"
+              :value="item.id"
+            ></el-option>
+          </el-select>
+        </p>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="assignVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="setUserRole">Confirm</el-button>
       </span>
     </el-dialog>
   </div>
@@ -188,7 +220,11 @@ export default {
         ]
       },
       editDialogVisible: false,
-      editForm: {}
+      editForm: {},
+      assignVisible: false,
+      userInfo: {},
+      rolesList: [],
+      selectedRoleId: ''
     }
   },
   created () {
@@ -280,6 +316,40 @@ export default {
         this.$message.success('succeed to delete the user')
         this.getUserList()
       }
+    },
+    async setRole (userInfo) {
+      this.userInfo = userInfo
+
+      const { data: res } = await this.$http.get('roles')
+
+      if (res.meta.status !== 200) {
+        return this.$message.error('failed to get the role list')
+      }
+
+      this.rolesList = res.data
+      this.assignVisible = true
+    },
+    async setUserRole () {
+      if (!this.selectedRoleId) {
+        return this.$message.error('please select a role')
+      }
+
+      const { data: res } = await this.$http.put(`users/${this.userInfo.id}/role`, {
+        rid: this.selectedRoleId
+      })
+
+      if (res.meta.status !== 200) {
+        return this.$message.error('failed to change the role for user')
+      }
+
+      this.$message.success('succeed to change the roe for user')
+      this.getUserList()
+
+      this.assignVisible = false
+    },
+    setRoleDialogClosed () {
+      this.selectedRoleId = ''
+      this.userInfo = {}
     }
   }
 
